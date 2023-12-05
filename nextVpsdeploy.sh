@@ -18,7 +18,9 @@ function menu {
     echo -e "\e[1;36m1. Deploy a website using GitHub"
     echo "2. Show currently deployed websites"
     echo "3. Restart NGINX"
-    echo "4. Exit\e[0m"
+    echo "4. Remove a website"
+    echo "5. Redeploy SSL certificate"
+    echo "6. Exit\e[0m"
 }
 
 # Update and upgrade the server
@@ -50,12 +52,20 @@ then
     sudo npm install -g pm2
 fi
 
+if ! command -v curl &> /dev/null
+then
+    echo -e "\e[1;31mCurl could not be found, installing...\e[0m"
+    sudo apt install curl
+fi
+
 if ! command -v nvm &> /dev/null
 then
     echo -e "\e[1;31mNVM could not be found, installing...\e[0m"
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
-    exec $SHELL
-    nvm install --lts
+    echo "nvm install --lts" > install_nvm.sh
+    chmod +x install_nvm.sh
+    ./install_nvm.sh
+    rm install_nvm.sh
 fi
 
 if ! command -v git &> /dev/null
@@ -154,11 +164,14 @@ while true; do
             ls /etc/nginx/sites-available | cat -n
             read -p "Enter the number of the website you want to see the details of: " WEBSITE_NUMBER
             WEBSITE_NAME=$(ls /etc/nginx/sites-available | sed -n "$WEBSITE_NUMBER"p)
-            echo -e "\e[1;36mApp Name: $WEBSITE_NAME\e[0m"
-            echo -e "\e[1;36mDomain Name: $(grep -oP 'server_name \K.*?(?=;)' /etc/nginx/sites-available/$WEBSITE_NAME)\e[0m"
-            echo -e "\e[1;36mPort: $(grep -oP 'proxy_pass http://localhost:\K.*?(?=;)' /etc/nginx/sites-available/$WEBSITE_NAME)\e[0m"
-            echo -e "\e[1;36mSSL Status: $(if sudo nginx -t 2>&1 | grep -q "/etc/letsencrypt/live/$WEBSITE_NAME/fullchain.pem"; then echo "Enabled"; else echo "Disabled"; fi)\e[0m"
-            echo -e "\e[1;36mSSL Expiry Date: $(if sudo nginx -t 2>&1 | grep -q "/etc/letsencrypt/live/$WEBSITE_NAME/fullchain.pem"; then echo $(date -d "$(openssl x509 -enddate -noout -in /etc/letsencrypt/live/$WEBSITE_NAME/fullchain.pem | cut -d= -f 2)" --iso-8601); else echo "N/A"; fi)\e[0m"
+            echo -e "\e[1;33m
+            ┌──────────────────────────────────────────────────────────────┐"
+            echo -e "│\e[0m\e[1;36mApp Name: $WEBSITE_NAME\e[0m\e[1;33m                                               │"
+            echo -e "│\e[0m\e[1;36mDomain Name: $(grep -oP 'server_name \K.*?(?=;)' /etc/nginx/sites-available/$WEBSITE_NAME)\e[0m\e[1;33m                          │"
+            echo -e "│\e[0m\e[1;36mPort: $(grep -oP 'proxy_pass http://localhost:\K.*?(?=;)' /etc/nginx/sites-available/$WEBSITE_NAME)\e[0m\e[1;33m                        │"
+            echo -e "│\e[0m\e[1;36mSSL Status: $(if sudo nginx -t 2>&1 | grep -q "/etc/letsencrypt/live/$WEBSITE_NAME/fullchain.pem"; then echo "Enabled"; else echo "Disabled"; fi)\e[0m\e[1;33m │"
+            echo -e "│\e[0m\e[1;36mSSL Expiry Date: $(if sudo nginx -t 2>&1 | grep -q "/etc/letsencrypt/live/$WEBSITE_NAME/fullchain.pem"; then echo $(date -d "$(openssl x509 -enddate -noout -in /etc/letsencrypt/live/$WEBSITE_NAME/fullchain.pem | cut -d= -f 2)" --iso-8601); else echo "N/A"; fi)\e[0m\e[1;33m │"
+            echo -e "└──────────────────────────────────────────────────────────────┘\e[0m"
             echo -e "\e[1;36mNginx Configuration:\e[0m"
             cat /etc/nginx/sites-available/$WEBSITE_NAME
             echo -e "\e[1;36mSSL Certificate Status:\e[0m"
@@ -174,7 +187,29 @@ while true; do
         3)  # Restart NGINX
             systemctl restart nginx
             ;;
-        4)  # Exit
+        4)  # Remove a website
+            echo "Currently deployed websites:"
+            ls /etc/nginx/sites-available | cat -n
+            read -p "Enter the number of the website you want to remove: " WEBSITE_NUMBER
+            WEBSITE_NAME=$(ls /etc/nginx/sites-available | sed -n "$WEBSITE_NUMBER"p)
+            sudo rm -rf /var/www/$WEBSITE_NAME
+            sudo rm /etc/nginx/sites-available/$WEBSITE_NAME
+            sudo rm /etc/nginx/sites-enabled/$WEBSITE_NAME
+            sudo rm -rf /etc/letsencrypt/live/$WEBSITE_NAME
+            sudo rm -rf /etc/letsencrypt/archive/$WEBSITE_NAME
+            sudo rm /etc/letsencrypt/renewal/$WEBSITE_NAME.conf
+            systemctl restart nginx
+            echo -e "\e[1;32mWebsite removed successfully.\e[0m"
+            ;;
+        5)  # Redeploy SSL certificate
+            echo "Currently deployed websites:"
+            ls /etc/nginx/sites-available | cat -n
+            read -p "Enter the number of the website you want to redeploy SSL certificate for: " WEBSITE_NUMBER
+            WEBSITE_NAME=$(ls /etc/nginx/sites-available | sed -n "$WEBSITE_NUMBER"p)
+            sudo certbot --nginx -d $(grep -oP 'server_name \K.*?(?=;)' /etc/nginx/sites-available/$WEBSITE_NAME)
+            echo -e "\e[1;32mSSL certificate redeployed successfully.\e[0m"
+            ;;
+        6)  # Exit
             if ! [ -f ~/.ssh/id_rsa.pub ]
             then
                 echo -e "\e[1;33m
