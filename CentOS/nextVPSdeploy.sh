@@ -31,31 +31,31 @@ sudo yum update
 if ! command -v nginx &> /dev/null
 then
     echo -e "\e[1;31mNGINX could not be found, installing...\e[0m"
-    sudo yum install nginx
+    sudo yum install nginx -y
 fi
 
 if ! command -v certbot &> /dev/null
 then
     echo -e "\e[1;31mCertbot could not be found, installing...\e[0m"
-    sudo yum install certbot python3-certbot-nginx
+    sudo yum install certbot python3-certbot-nginx -y
 fi
 
 if ! command -v npm &> /dev/null
 then
     echo -e "\e[1;31mNPM could not be found, installing...\e[0m"
-    sudo yum install npm
+    sudo yum install npm -y
 fi
 
 if ! command -v pm2 &> /dev/null
 then
     echo -e "\e[1;31mpm2 could not be found, installing...\e[0m"
-    sudo npm install -g pm2
+    sudo npm install -g pm2 -y
 fi
 
 if ! command -v curl &> /dev/null
 then
     echo -e "\e[1;31mCurl could not be found, installing...\e[0m"
-    sudo yum install curl
+    sudo yum install curl -y
 fi
 
 if ! command -v nvm &> /dev/null
@@ -71,13 +71,13 @@ fi
 if ! command -v git &> /dev/null
 then
     echo -e "\e[1;31mGit could not be found, installing...\e[0m"
-    sudo yum install git
+    sudo yum install git -y
 fi
 
 if ! command -v python3 &> /dev/null
 then
     echo -e "\e[1;31mPython3 could not be found, installing...\e[0m"
-    sudo yum install python3
+    sudo yum install python3 -y
 fi
 
 echo -e "\e[1;32mEnvironment setup is done.\e[0m"
